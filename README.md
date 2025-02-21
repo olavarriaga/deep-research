@@ -79,7 +79,7 @@ flowchart TB
 - Node.js environment
 - API keys for:
   - Firecrawl API (for web search and content extraction)
-  - OpenAI API (for o3 mini model)
+  - OpenAI API (for GPT-4 models)
 
 ## Setup
 
@@ -100,6 +100,7 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
 OPENAI_KEY="your_openai_key"
+OPENAI_MODEL="gpt-4o-mini" # or "gpt-4o"
 ```
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
