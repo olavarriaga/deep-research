@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BeakerIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
+import { BeakerIcon, Cog6ToothIcon, Squares2X2Icon } from '@heroicons/react/24/outline'
 import { useTheme } from 'next-themes'
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid'
 
@@ -22,27 +22,46 @@ export function Navigation() {
         </Link>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            className={`group relative rounded-lg p-2 transition-colors ${
+              pathname === '/dashboard'
+                ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Squares2X2Icon className="h-5 w-5" />
+            <span className="absolute left-full ml-2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition-all group-hover:opacity-100 dark:bg-gray-700">
+              Dashboard
+            </span>
+          </Link>
+
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            className="group relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
           >
             {theme === 'dark' ? (
               <SunIcon className="h-5 w-5" />
             ) : (
               <MoonIcon className="h-5 w-5" />
             )}
+            <span className="absolute left-full ml-2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition-all group-hover:opacity-100 dark:bg-gray-700">
+              Toggle theme
+            </span>
           </button>
 
           <Link
             href="/settings"
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`group relative rounded-lg p-2 transition-colors ${
               pathname === '/settings'
                 ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
                 : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
             }`}
           >
             <Cog6ToothIcon className="h-5 w-5" />
-            Settings
+            <span className="absolute left-full ml-2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 transition-all group-hover:opacity-100 dark:bg-gray-700">
+              Settings
+            </span>
           </Link>
         </div>
       </nav>

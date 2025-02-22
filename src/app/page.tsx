@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
@@ -12,6 +12,16 @@ export default function HomePage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [recentSessions, setRecentSessions] = useState<Array<{ id: string; query: string; timestamp: Date }>>([])
+
+  useEffect(() => {
+    const sessions = researchService.getSessions()
+    setRecentSessions(sessions.slice(0, 3).map(s => ({
+      id: s.id,
+      query: s.query,
+      timestamp: s.timestamp
+    })))
+  }, [])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,6 +104,35 @@ export default function HomePage() {
             {isLoading ? 'Starting Research...' : 'Start Research'}
           </button>
         </form>
+
+        {/* Recent Searches */}
+        {recentSessions.length > 0 && (
+          <div className="mt-8">
+            <h2 className="mb-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+              Recent Searches
+            </h2>
+            <div className="space-y-2">
+              {recentSessions.map(session => (
+                <motion.div
+                  key={session.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary-400"
+                  onClick={() => router.push(`/dashboard?session=${session.id}`)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
+                      {session.query}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(session.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   )

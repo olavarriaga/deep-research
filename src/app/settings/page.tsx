@@ -10,15 +10,26 @@ import {
   MoonIcon,
   ComputerDesktopIcon,
   CheckIcon,
+  RocketLaunchIcon,
+  ArrowLeftIcon,
 } from '@heroicons/react/24/outline'
 import { settingsService } from '@/lib/settings'
 import type { ApiKeys } from '@/lib/settings'
+import Link from 'next/link'
+
+const FIRECRAWL_PLANS = [
+  { id: 'free', name: 'Free', limits: '6 requests/min' },
+  { id: 'hobby', name: 'Hobby', limits: '30 requests/min' },
+  { id: 'standard', name: 'Standard', limits: '60 requests/min' },
+  { id: 'growth', name: 'Growth', limits: '120 requests/min' },
+] as const;
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const [apiKeys, setApiKeys] = useState<ApiKeys>({
     openai: '',
     searchApi: '',
+    firecrawlPlan: 'free',
   })
   const [isLoading, setIsLoading] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -53,6 +64,14 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mx-auto max-w-2xl"
       >
+        <Link
+          href="/dashboard"
+          className="mb-6 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+
         <h1 className="mb-8 text-3xl font-bold text-gray-900 dark:text-white">
           Settings
         </h1>
@@ -103,6 +122,31 @@ export default function SettingsPage() {
                 placeholder="Enter your search API key"
                 disabled={isLoading}
               />
+            </div>
+
+            {/* Firecrawl Plan Selection */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Firecrawl Plan
+              </label>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {FIRECRAWL_PLANS.map((plan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setApiKeys(prev => ({ ...prev, firecrawlPlan: plan.id as ApiKeys['firecrawlPlan'] }))}
+                    className={`flex flex-col items-center justify-center rounded-lg border p-4 transition-all ${
+                      apiKeys.firecrawlPlan === plan.id
+                        ? 'border-primary-500 bg-primary-100 text-primary-800 shadow-md dark:border-primary-400 dark:bg-primary-900/40 dark:text-primary-300'
+                        : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <RocketLaunchIcon className="mb-2 h-6 w-6" />
+                    <span className="text-sm font-medium">{plan.name}</span>
+                    <span className="mt-1 text-xs opacity-75">{plan.limits}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button

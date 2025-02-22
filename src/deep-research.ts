@@ -33,8 +33,42 @@ type ResearchResult = {
   visitedUrls: string[];
 };
 
-// increase this if you have higher API rate limits
-const ConcurrencyLimit = 1;
+// Rate limit configuration based on Firecrawl plans
+const PLAN_CONFIGS = {
+  free: {
+    requestsPerMinute: 6,
+    concurrencyLimit: 2,
+    maxRetries: 3,
+    baseDelay: 1000, // 1 second
+  },
+  hobby: {
+    requestsPerMinute: 30,
+    concurrencyLimit: 5,
+    maxRetries: 3,
+    baseDelay: 500, // 500ms
+  },
+  standard: {
+    requestsPerMinute: 60,
+    concurrencyLimit: 10,
+    maxRetries: 3,
+    baseDelay: 250, // 250ms
+  },
+  growth: {
+    requestsPerMinute: 120,
+    concurrencyLimit: 20,
+    maxRetries: 3,
+    baseDelay: 100, // 100ms
+  }
+} as const;
+
+// Get plan from settings
+const currentPlan = (settingsService.getApiKeys().firecrawlPlan || 'free') as keyof typeof PLAN_CONFIGS;
+const planConfig = PLAN_CONFIGS[currentPlan];
+
+// Configure rate limits based on plan
+const ConcurrencyLimit = planConfig.concurrencyLimit;
+const MaxRetries = planConfig.maxRetries;
+const BaseDelay = planConfig.baseDelay;
 
 // Initialize Firecrawl with API key from settings
 const firecrawl = new FirecrawlApp({
@@ -106,6 +140,20 @@ Return a maximum of ${numQueries} queries, but feel free to return less if the o
   return res.object.queries.slice(0, numQueries);
 }
 
+async function searchWithRetry(query: string, attempt = 1): Promise<SearchResponse> {
+  try {
+    return await firecrawl.search(query);
+  } catch (e: any) {
+    if (e.message?.includes('Rate limit exceeded') && attempt < MaxRetries) {
+      const delay = BaseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+      log(`Rate limit hit, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return searchWithRetry(query, attempt + 1);
+    }
+    throw e;
+  }
+}
+
 async function processSerpResult({
   query,
   result,
@@ -117,9 +165,28 @@ async function processSerpResult({
   numLearnings?: number;
   numFollowUpQuestions?: number;
 }) {
-  const contents = compact(result.data.map(item => item.markdown)).map(
+  // Log the first item to see its structure
+  if (result.data[0]) {
+    log('First search result item:', JSON.stringify(result.data[0], null, 2));
+  }
+
+  // Extract content from the description field
+  const contents = compact(result.data.map(item => {
+    const itemAsAny = item as any;
+    const content = itemAsAny.description || '';
+    // Also include title for additional context if available
+    return content + (itemAsAny.title ? `\nTitle: ${itemAsAny.title}` : '');
+  })).map(
     content => trimPrompt(content, 25_000),
   );
+  
+  log('Content processing results:', {
+    originalLength: result.data?.length,
+    afterCompact: contents.length,
+    finalContents: contents.length,
+    firstContent: contents[0]
+  });
+
   log(`Ran ${query}, found ${contents.length} contents`);
 
   // If no contents found, return empty arrays in the correct format
@@ -132,7 +199,17 @@ async function processSerpResult({
 
   const res = await generateValidatedObject({
     abortSignal: AbortSignal.timeout(60_000),
-    prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. 
+    prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents.
+
+RESPONSE FORMAT:
+Each learning MUST be an object with ALL of the following required fields:
+- fact: The verified business fact or learning (string)
+- sourcesCount: Number of independent sources that confirm this fact (number)
+- sourceTypes: Array of source types from: ['company', 'news', 'financial', 'regulatory', 'industry', 'other']
+- confidenceLevel: One of: 'verified', 'likely', 'needs_verification'
+- dateVerified: Most recent date this information was confirmed (string in YYYY-MM-DD format)
+- conflictingInfo: Any significant disagreements or alternative viewpoints (string, use "None found" if none)
+- limitations: Any important context or limitations about this fact (string, use "None noted" if none)
 
 BUSINESS RESEARCH REQUIREMENTS:
 - Focus on verifiable business facts and metrics
@@ -152,7 +229,20 @@ For each learning:
 4. Note the context of business developments
 5. Consider market impact and industry significance
 
-Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and information dense as possible. Include specific data points, dates, and measurable facts when available.\n\n<contents>${contents
+Return a maximum of ${numLearnings} learnings and ${numFollowUpQuestions} follow-up questions. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and information dense as possible. Include specific data points, dates, and measurable facts when available.
+
+EXAMPLE LEARNING OBJECT:
+{
+  "fact": "Anduril achieved $342M in revenue in 2023, up from previous year",
+  "sourcesCount": 2,
+  "sourceTypes": ["financial", "news"],
+  "confidenceLevel": "verified",
+  "dateVerified": "2024-02-21",
+  "conflictingInfo": "Some sources estimate slightly different revenue figures",
+  "limitations": "Based on estimates, not official financial statements"
+}
+
+Here are the contents to analyze:\n\n<contents>${contents
       .map(content => `<content>\n${content}\n</content>`)
       .join('\n')}</contents>`,
     schema: z.object({
@@ -287,7 +377,15 @@ export async function deepResearch({
             completedQueries: progress.completedQueries + 1,
           });
 
-          const result = await firecrawl.search(serpQuery.query);
+          const result = await searchWithRetry(serpQuery.query);
+          
+          // Add detailed logging
+          log('Search result:', {
+            query: serpQuery.query,
+            hasData: !!result.data,
+            dataLength: result.data?.length || 0,
+            error: result.error
+          });
           
           // Handle empty search results
           if (!result.data || result.data.length === 0) {

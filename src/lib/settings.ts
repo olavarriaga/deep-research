@@ -1,12 +1,14 @@
 export interface ApiKeys {
   openai: string
   searchApi: string
+  firecrawlPlan?: 'free' | 'hobby' | 'standard' | 'growth'
 }
 
 export class SettingsService {
   private apiKeys: ApiKeys = {
     openai: '',
     searchApi: '',
+    firecrawlPlan: 'free'
   }
 
   constructor() {
@@ -34,7 +36,8 @@ export class SettingsService {
       typeof keys === 'object' &&
       keys !== null &&
       typeof keys.openai === 'string' &&
-      typeof keys.searchApi === 'string'
+      typeof keys.searchApi === 'string' &&
+      (!keys.firecrawlPlan || ['free', 'hobby', 'standard', 'growth'].includes(keys.firecrawlPlan))
     )
   }
 
