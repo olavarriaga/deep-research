@@ -1,9 +1,4 @@
-import { Inter } from 'next/font/google'
-import { Providers } from '@/components/providers'
-import { AuthProvider } from '@/components/providers/AuthProvider'
-import '../globals.css'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+import { ReactNode } from 'react'
 
 export const metadata = {
   title: 'Presentation - Deep Research',
@@ -13,17 +8,11 @@ export const metadata = {
 export default function PresentationLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <Providers>
-            {children}
-          </Providers>
-        </AuthProvider>
-      </body>
-    </html>
+    <div className="min-h-screen bg-gray-900">
+      {children}
+    </div>
   )
 } 

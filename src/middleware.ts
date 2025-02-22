@@ -32,8 +32,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Allow access to all other routes
-  return NextResponse.next()
+  // Add pathname to headers for use in layouts
+  const response = NextResponse.next()
+  response.headers.set('x-pathname', pathname)
+  return response
 }
 
 export const config = {
