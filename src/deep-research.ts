@@ -33,7 +33,7 @@ type ResearchResult = {
 };
 
 // increase this if you have higher API rate limits
-const ConcurrencyLimit = 2;
+const ConcurrencyLimit = 1;
 
 // Initialize Firecrawl with optional API key and optional base url
 
@@ -148,8 +148,8 @@ Return a maximum of ${numLearnings} learnings, but feel free to return less if t
             sourceTypes: z.array(z.enum(['academic', 'institutional', 'news', 'expert', 'other'])).describe('Types of sources that confirm this fact'),
             confidenceLevel: z.enum(['verified', 'likely', 'needs_verification']).describe('Confidence in the fact based on source quality and consensus'),
             dateVerified: z.string().describe('Most recent date this information was confirmed'),
-            conflictingInfo: z.string().optional().describe('Any significant disagreements or alternative viewpoints'),
-            limitations: z.string().optional().describe('Any important context or limitations about this fact'),
+            conflictingInfo: z.string().describe('Any significant disagreements or alternative viewpoints'),
+            limitations: z.string().describe('Any important context or limitations about this fact'),
           })
         )
         .describe(`List of verified learnings, max of ${numLearnings}`),
@@ -164,8 +164,15 @@ Return a maximum of ${numLearnings} learnings, but feel free to return less if t
   
   // Filter and format the learnings with verification context
   const verifiedLearnings = res.object.learnings
-    .filter(l => l.confidenceLevel !== 'needs_verification')
-    .map(l => {
+    .filter((l: { confidenceLevel: string }) => l.confidenceLevel !== 'needs_verification')
+    .map((l: { 
+      fact: string;
+      sourcesCount: number;
+      sourceTypes: string[];
+      dateVerified: string;
+      conflictingInfo?: string;
+      limitations?: string;
+    }) => {
       let text = `${l.fact} [Verified by ${l.sourcesCount} ${l.sourceTypes.join('/')} source(s) as of ${l.dateVerified}]`;
       if (l.conflictingInfo) {
         text += `\nNote: Alternative viewpoint: ${l.conflictingInfo}`;
@@ -256,73 +263,61 @@ export async function deepResearch({
   const limit = pLimit(ConcurrencyLimit);
 
   const results = await Promise.all(
-    serpQueries.map(serpQuery =>
+    serpQueries.map((serpQuery: { query: string; researchGoal: string }) =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
-            timeout: 15000,
-            limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
+          reportProgress({
+            currentQuery: serpQuery.query,
+            completedQueries: progress.completedQueries + 1,
           });
 
-          // Collect URLs from this search
-          const newUrls = compact(result.data.map(item => item.url));
-          const newBreadth = Math.ceil(breadth / 2);
-          const newDepth = depth - 1;
-
-          const newLearnings = await processSerpResult({
-            query: serpQuery.query,
-            result,
-            numFollowUpQuestions: newBreadth,
-          });
-          const allLearnings = [...learnings, ...newLearnings.learnings];
-          const allUrls = [...visitedUrls, ...newUrls];
-
-          if (newDepth > 0) {
-            log(
-              `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
-            );
-
-            reportProgress({
-              currentDepth: newDepth,
-              currentBreadth: newBreadth,
-              completedQueries: progress.completedQueries + 1,
-              currentQuery: serpQuery.query,
-            });
-
-            const nextQuery = `
-            Previous research goal: ${serpQuery.researchGoal}
-            Follow-up research directions: ${newLearnings.followUpQuestions.map(q => `\n${q}`).join('')}
-          `.trim();
-
-            return deepResearch({
-              query: nextQuery,
-              breadth: newBreadth,
-              depth: newDepth,
-              learnings: allLearnings,
-              visitedUrls: allUrls,
-              onProgress,
-            });
-          } else {
-            reportProgress({
-              currentDepth: 0,
-              completedQueries: progress.completedQueries + 1,
-              currentQuery: serpQuery.query,
-            });
+          const result = await firecrawl.search(serpQuery.query);
+          
+          // Handle empty search results
+          if (!result.data || result.data.length === 0) {
+            log(`No results found for query: ${serpQuery.query}`);
             return {
-              learnings: allLearnings,
-              visitedUrls: allUrls,
+              learnings: [],
+              visitedUrls: [],
             };
           }
-        } catch (e: any) {
-          if (e.message && e.message.includes('Timeout')) {
-            log(
-              `Timeout error running query: ${serpQuery.query}: `,
-              e,
+
+          const processedResults = await processSerpResult({
+            query: serpQuery.query,
+            result,
+            numLearnings: 3,
+            numFollowUpQuestions: 3,
+          });
+
+          learnings.push(...processedResults.learnings);
+          visitedUrls.push(...(result.data?.map(d => d.url).filter((url): url is string => url !== undefined) ?? []));
+
+          if (depth > 1) {
+            const followUpResults = await Promise.all(
+              processedResults.followUpQuestions.map((q: string) =>
+                deepResearch({
+                  query: q,
+                  breadth: Math.max(1, breadth - 1),
+                  depth: depth - 1,
+                  learnings,
+                  visitedUrls,
+                  onProgress,
+                }),
+              ),
             );
-          } else {
-            log(`Error running query: ${serpQuery.query}: `, e);
+
+            followUpResults.forEach(r => {
+              learnings.push(...r.learnings);
+              visitedUrls.push(...r.visitedUrls);
+            });
           }
+
+          return {
+            learnings,
+            visitedUrls,
+          };
+        } catch (e: any) {
+          log(`Error running query: ${serpQuery.query}: `, e);
           return {
             learnings: [],
             visitedUrls: [],
@@ -333,7 +328,7 @@ export async function deepResearch({
   );
 
   return {
-    learnings: [...new Set(results.flatMap(r => r.learnings))],
-    visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
+    learnings,
+    visitedUrls,
   };
 }
