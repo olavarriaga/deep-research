@@ -11,11 +11,11 @@ export async function middleware(request: NextRequest) {
   console.log('Has token:', !!token)
 
   // Define public and auth pages
-  const PUBLIC_PAGES = ['/', '/technical-paper']
+  const PUBLIC_PAGES = ['/', '/technical-paper', '/presentation']
   const AUTH_PAGES = ['/login', '/signup']
 
   const isAuthPage = AUTH_PAGES.some(page => pathname.startsWith(page))
-  const isPublicPage = PUBLIC_PAGES.includes(pathname)
+  const isPublicPage = PUBLIC_PAGES.some(page => pathname.startsWith(page))
 
   // Debug logging
   console.log('Is auth page:', isAuthPage)

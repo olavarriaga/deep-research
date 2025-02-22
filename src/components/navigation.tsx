@@ -21,8 +21,8 @@ export function Navigation() {
           href="/"
           className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white"
         >
-          <BeakerIcon className="h-6 w-6" />
-          Deep Research
+          <BeakerIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+          <span>Deep Research</span>
         </Link>
 
         <div className="flex items-center gap-2">
