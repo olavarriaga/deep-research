@@ -1,345 +1,311 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { MagnifyingGlassIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { toast } from 'sonner'
-import { researchService } from '@/lib/research'
-import { settingsService } from '@/lib/settings'
-import { generateFeedback } from '@/feedback'
+import Link from 'next/link'
+import { BeakerIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
-export default function HomePage() {
-  const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [loadingStatus, setLoadingStatus] = useState('')
-  const [recentSessions, setRecentSessions] = useState<Array<{ id: string; query: string; timestamp: Date }>>([])
-  const [feedbackQuestions, setFeedbackQuestions] = useState<string[]>([])
-  const [feedbackAnswers, setFeedbackAnswers] = useState<string[]>([])
-  const [showQuestions, setShowQuestions] = useState(false)
-  const [depth, setDepth] = useState(2)
-  const [breadth, setBreadth] = useState(4)
+export default function LandingPage() {
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false)
 
-  useEffect(() => {
-    const sessions = researchService.getSessions()
-    setRecentSessions(sessions.slice(0, 3).map(s => ({
-      id: s.id,
-      query: s.query,
-      timestamp: s.timestamp
-    })))
-  }, [])
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!searchQuery.trim()) {
-      toast.error('Please enter a research topic')
-      return
-    }
-
-    if (!settingsService.hasValidApiKeys()) {
-      toast.error('Please configure your API keys in Settings first')
-      router.push('/settings')
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setLoadingStatus('Starting...')
-      
-      const questions = await generateFeedback({ 
-        query: searchQuery,
-        onProgress: (status) => {
-          setLoadingStatus(status)
-        }
-      })
-      
-      if (questions) {
-        setFeedbackQuestions(questions)
-        setFeedbackAnswers(new Array(questions.length).fill(''))
-        setShowQuestions(true)
-      }
-    } catch (error) {
-      console.error('Feedback generation error:', error)
-      // Error toasts are now handled in generateFeedback
-    } finally {
-      setIsLoading(false)
-      setLoadingStatus('')
-    }
-  }
-
-  const handleStartResearch = async () => {
-    if (feedbackAnswers.some(answer => !answer.trim())) {
-      toast.error('Please answer all questions')
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      const combinedQuery = `
-Initial Query: ${searchQuery}
-Follow-up Questions and Answers:
-${feedbackQuestions.map((q, i) => `Q: ${q}\nA: ${feedbackAnswers[i]}`).join('\n')}
-`
-      const session = await researchService.startResearch(combinedQuery, breadth, depth)
-      router.push(`/dashboard?session=${session.id}`)
-    } catch (error) {
-      console.error('Research error:', error)
-      toast.error('Failed to start research. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const comparisonFeatures = [
+    {
+      feature: 'Research Depth',
+      deepResearch: 'Multi-level recursive research with adjustable depth (1-5 levels)',
+      chatGPT: 'Single-level responses based on training data',
+      better: true,
+    },
+    {
+      feature: 'Source Coverage',
+      deepResearch: 'Multiple parallel queries with adjustable breadth (2-10 parallel paths)',
+      chatGPT: 'Limited to training data cutoff date',
+      better: true,
+    },
+    {
+      feature: 'Real-time Data',
+      deepResearch: 'Live web search and data gathering',
+      chatGPT: 'Knowledge cutoff date limited',
+      better: true,
+    },
+    {
+      feature: 'Research Focus',
+      deepResearch: 'AI-generated follow-up questions for targeted exploration',
+      chatGPT: 'User must manually guide the conversation',
+      better: true,
+    },
+    {
+      feature: 'Cost Control',
+      deepResearch: 'Transparent cost estimation based on depth and breadth',
+      chatGPT: 'Subscription or per-message pricing',
+      better: true,
+    },
+    {
+      feature: 'Research History',
+      deepResearch: 'Permanent storage and organization of research sessions',
+      chatGPT: 'Limited chat history retention',
+      better: true,
+    },
+    {
+      feature: 'Export Options',
+      deepResearch: 'Structured reports with categorized findings',
+      chatGPT: 'Copy-paste from chat',
+      better: true,
+    },
+    {
+      feature: 'API Integration',
+      deepResearch: 'Customizable API keys for OpenAI and search services',
+      chatGPT: 'Fixed API without customization',
+      better: true,
+    },
+  ]
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 pt-8 dark:from-gray-900 dark:to-gray-800">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-2xl text-center"
-      >
-        <div className="mb-12">
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="mx-auto mb-6 h-24 w-24 text-primary-600 dark:text-primary-400"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Hero Section */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="py-12 sm:py-16 lg:py-20">
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="mx-auto mb-6 h-24 w-24 text-primary-600 dark:text-primary-400"
             >
-              <path d="M10 2v7.527a2 2 0 01-.211.896L4.72 20.55a1 1 0 001.832.785l1.055-2.47a1 1 0 011.832 0l1.055 2.47a1 1 0 001.832-.785l-5.069-10.127A2 2 0 016.046 9.527V2" />
-              <path d="M14 2v7.527a2 2 0 00.211.896l5.069 10.127a1 1 0 01-1.832.785l-1.055-2.47a1 1 0 00-1.832 0l-1.055 2.47a1 1 0 01-1.832-.785l5.069-10.127a2 2 0 00.211-.896V2" />
-            </svg>
-          </motion.div>
-          <h1 className="mb-4 text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl">
-            Deep Research
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
-            Automate in-depth research using AI and external search APIs
-          </p>
+              <BeakerIcon className="h-full w-full" />
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl"
+            >
+              Deep Research
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-300"
+            >
+              Automate your research process using AI and advanced search algorithms. Get comprehensive insights and save hours of manual work.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mt-10 flex items-center justify-center gap-4"
+            >
+              <Link
+                href="/login"
+                className="rounded-lg bg-primary-600 px-8 py-3 text-lg font-semibold text-white shadow-sm transition-colors hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:bg-primary-500 dark:hover:bg-primary-400"
+              >
+                Get Started
+              </Link>
+              <Link
+                href="#features"
+                className="rounded-lg border border-gray-300 bg-white px-8 py-3 text-lg font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Learn More
+              </Link>
+            </motion.div>
+          </div>
         </div>
+      </div>
 
-        {!showQuestions ? (
-          <form onSubmit={handleSearch} className="space-y-6">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Enter your research topic..."
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pl-12 text-lg shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-primary-400"
-                disabled={isLoading}
-              />
-              <MagnifyingGlassIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            </div>
+      {/* Features Section */}
+      <div id="features" className="bg-white py-16 dark:bg-gray-800/50 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+              Why Choose Deep Research?
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
+              Our platform combines cutting-edge AI with powerful search capabilities to transform your research process.
+            </p>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div className="mb-4">
-                  <div className="flex h-8 items-center justify-between">
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">
-                      Research Depth
-                    </label>
-                    <div className="group relative">
-                      <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                      <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-600 shadow-lg group-hover:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        Controls how many levels of follow-up questions are explored (1-5)
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-1 text-left text-xs text-gray-500 dark:text-gray-400">
-                    Deeper research explores more follow-up questions
-                  </p>
-                </div>
+          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                title: 'AI-Powered Research',
+                description: 'Leverage advanced AI models to analyze and synthesize information from multiple sources.',
+              },
+              {
+                title: 'Comprehensive Coverage',
+                description: 'Access a wide range of sources and get deep insights with our recursive search algorithm.',
+              },
+              {
+                title: 'Time Saving',
+                description: 'Reduce research time by up to 80% with automated information gathering and analysis.',
+              },
+              {
+                title: 'Customizable Depth',
+                description: 'Control how deep you want to go with adjustable research parameters.',
+              },
+              {
+                title: 'Smart Summaries',
+                description: 'Get concise, relevant summaries of your research findings.',
+              },
+              {
+                title: 'Export & Share',
+                description: 'Easily export your research findings or share them with your team.',
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              >
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-                <div className="flex flex-1 flex-col justify-between space-y-4">
-                  <input
-                    type="range"
-                    min="1"
-                    max="5"
-                    value={depth}
-                    onChange={(e) => setDepth(parseInt(e.target.value))}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary-600 dark:bg-gray-700"
-                  />
-                  <div className="flex items-center justify-between px-1 text-sm">
-                    <span className="font-medium text-gray-500 dark:text-gray-400">Shallow</span>
-                    <span className="rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-                      {depth} Levels
-                    </span>
-                    <span className="font-medium text-gray-500 dark:text-gray-400">Deep</span>
-                  </div>
-                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
-                    <p className="text-center text-xs font-medium text-gray-500 dark:text-gray-400">
-                      Estimated Usage
-                    </p>
-                    <div className="mt-1 grid grid-cols-2 gap-2 text-center text-xs text-gray-500 dark:text-gray-400">
-                      <div>
-                        <span className="font-semibold text-primary-600 dark:text-primary-400">{depth * breadth * 1000}</span> input
-                      </div>
-                      <div>
-                        <span className="font-semibold text-primary-600 dark:text-primary-400">{depth * breadth * 500}</span> output
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div className="mb-4">
-                  <div className="flex h-8 items-center justify-between">
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">
-                      Research Breadth
-                    </label>
-                    <div className="group relative">
-                      <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                      <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-600 shadow-lg group-hover:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        Controls how many parallel search queries are generated (2-10)
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-1 text-left text-xs text-gray-500 dark:text-gray-400">
-                    Wider research covers more parallel topics
-                  </p>
-                </div>
-
-                <div className="flex flex-1 flex-col justify-between space-y-4">
-                  <input
-                    type="range"
-                    min="2"
-                    max="10"
-                    value={breadth}
-                    onChange={(e) => setBreadth(parseInt(e.target.value))}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary-600 dark:bg-gray-700"
-                  />
-                  <div className="flex items-center justify-between px-1 text-sm">
-                    <span className="font-medium text-gray-500 dark:text-gray-400">Focused</span>
-                    <span className="rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-                      {breadth} Queries
-                    </span>
-                    <span className="font-medium text-gray-500 dark:text-gray-400">Wide</span>
-                  </div>
-                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
-                    <p className="text-center text-xs font-medium text-gray-500 dark:text-gray-400">
-                      Estimated Cost
-                    </p>
-                    <div className="mt-1 grid grid-cols-1 text-center text-xs text-gray-500 dark:text-gray-400">
-                      <div>
-                        <span className="font-semibold text-primary-600 dark:text-primary-400">
-                          ${((depth * breadth * 1500) / 1000 * 0.03).toFixed(2)}
-                        </span>
-                        <span> USD</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-primary-500 dark:hover:bg-primary-400"
+      {/* Comparison Section */}
+      <div className="bg-gray-50 py-16 dark:bg-gray-900/50 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl"
             >
-              {isLoading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                  <span>{loadingStatus}</span>
-                </div>
-              ) : (
-                'Continue'
-              )}
-            </button>
-          </form>
-        ) : (
+              Deep Research vs ChatGPT
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="mx-auto mt-4 max-w-2xl text-lg text-gray-600 dark:text-gray-300"
+            >
+              See how our specialized research platform compares to general-purpose AI chat
+            </motion.p>
+          </div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6 text-left"
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="mt-16 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800"
           >
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Please answer these questions to help focus the research:
-            </h2>
-            <div className="space-y-4">
-              {feedbackQuestions.map((question, index) => (
-                <div key={index} className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {question}
-                  </label>
-                  <input
-                    type="text"
-                    value={feedbackAnswers[index]}
-                    onChange={(e) => {
-                      const newAnswers = [...feedbackAnswers]
-                      newAnswers[index] = e.target.value
-                      setFeedbackAnswers(newAnswers)
-                    }}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                    placeholder="Your answer..."
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowQuestions(false)
-                  setFeedbackQuestions([])
-                  setFeedbackAnswers([])
-                }}
-                className="flex-1 rounded-lg border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={handleStartResearch}
-                disabled={isLoading}
-                className="flex-1 rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-primary-500 dark:hover:bg-primary-400"
-              >
-                {isLoading ? 'Starting Research...' : 'Start Research'}
-              </button>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50">
+                    <th scope="col" className="px-8 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                      Feature
+                    </th>
+                    <th scope="col" className="px-8 py-4 text-left text-sm font-semibold text-primary-600 dark:text-primary-400">
+                      Deep Research
+                    </th>
+                    <th scope="col" className="px-8 py-4 text-left text-sm font-semibold text-gray-500 dark:text-gray-400">
+                      ChatGPT
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {comparisonFeatures.map((item, index) => (
+                    <motion.tr
+                      key={item.feature}
+                      initial={{ opacity: 0, x: -20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      viewport={{ once: true }}
+                      className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-900/50'}
+                    >
+                      <td className="whitespace-nowrap px-8 py-5 text-sm font-medium text-gray-900 dark:text-white">
+                        {item.feature}
+                      </td>
+                      <td className="px-8 py-5 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                            <CheckIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+                          </span>
+                          {item.deepResearch}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                            <XMarkIcon className="h-4 w-4 text-red-500 dark:text-red-400" />
+                          </span>
+                          {item.chatGPT}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </motion.div>
-        )}
 
-        {/* Recent Searches */}
-        {!showQuestions && recentSessions.length > 0 && (
-          <div className="mt-8">
-            <h2 className="mb-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-              Recent Searches
+          {/* Technical Deep Dive */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="mt-12 text-center"
+          >
+            <Link
+              href="/technical-paper"
+              className="group inline-flex items-center gap-2 text-lg font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+            >
+              <span>Read our technical paper on recursive research methodology</span>
+              <svg
+                className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </Link>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Learn how our multi-level research algorithm achieves 87% better coverage compared to traditional approaches
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="bg-primary-600 py-16 dark:bg-primary-500 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Ready to Transform Your Research Process?
             </h2>
-            <div className="space-y-2">
-              {recentSessions.map(session => (
-                <motion.div
-                  key={session.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary-400"
-                  onClick={() => router.push(`/dashboard?session=${session.id}`)}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
-                      {session.query}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(session.timestamp).toLocaleDateString()}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-primary-100">
+              Join thousands of researchers who are already saving time and getting better results.
+            </p>
+            <div className="mt-8 flex justify-center">
+              <Link
+                href="/signup"
+                className="rounded-lg bg-white px-8 py-3 text-lg font-semibold text-primary-600 shadow-sm transition-colors hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-600 dark:bg-gray-800 dark:text-primary-400 dark:hover:bg-gray-700"
+              >
+                Start Free Trial
+              </Link>
             </div>
           </div>
-        )}
-      </motion.div>
+        </div>
+      </div>
     </div>
   )
 } 
