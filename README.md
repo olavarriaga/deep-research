@@ -1,6 +1,23 @@
-# Deep Research
+# Deep Research - Enhanced Edition
 
-An AI-powered research assistant that helps automate in-depth research using GPT-4 and external search APIs.
+A powerful AI-powered research assistant built on top of [@dzhng/deep-research](https://github.com/dzhng/deep-research) that helps automate in-depth research using GPT-4 and external search APIs. This enhanced version includes several improvements and modern development practices.
+
+## 🌟 Improvements & New Features
+
+- **Updated Tech Stack**: Upgraded to Next.js 14 with App Router and React 18
+- **Enhanced Testing**: Added Jest configuration with comprehensive test setup
+- **Modern Development Tools**: 
+  - Added Prettier configuration for consistent code formatting
+  - Docker support for containerized deployment
+  - Improved TypeScript configuration
+- **Development Experience**:
+  - Added `.nvmrc` for consistent Node.js version management
+  - Enhanced environment variable management with `.env.example`
+  - Windows-specific startup script (`start.bat`)
+- **Code Quality**:
+  - Improved TypeScript types and configurations
+  - Enhanced TailwindCSS setup with custom configurations
+  - Better project structure and organization
 
 ## 🚀 Quick Start
 
@@ -25,6 +42,12 @@ Simply double-click the `start.bat` file to run the application.
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Docker Setup
+
+```bash
+docker-compose up
+```
+
 ## 🛠️ Features
 
 - **Smart Research**: Automated research using AI and external search APIs
@@ -35,7 +58,7 @@ Simply double-click the `start.bat` file to run the application.
 
 ## 📋 Requirements
 
-- Node.js 22.x or later
+- Node.js 18.x or later (specified in `.nvmrc`)
 - Modern web browser
 - API keys for:
   - OpenAI (for GPT-4)
@@ -50,20 +73,31 @@ OPENAI_API_KEY=your_key_here
 SEARCH_API_KEY=your_key_here
 ```
 
+## 🧪 Testing
+
+Run tests using Jest:
+
+```bash
+npm test
+```
+
 ## 📱 Pages
 
 - **Home** (`/`): Start new research
 - **Dashboard** (`/dashboard`): View research progress
 - **Settings** (`/settings`): Configure API keys and preferences
 
-## 🎨 Development
+## 🎨 Tech Stack
 
 Built with:
-- Next.js 14
+- Next.js 14 (App Router)
 - React 18
 - TailwindCSS
 - TypeScript
 - Framer Motion
+- Jest for testing
+- Prettier for code formatting
+- Docker for containerization
 
 ## 📄 License
 
