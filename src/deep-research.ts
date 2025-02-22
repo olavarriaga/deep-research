@@ -4,13 +4,14 @@ import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
 import { z } from 'zod';
 
-import { gpt4Model, trimPrompt } from './ai/providers';
+import { getGPT4Model, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
 import { OutputManager } from './output-manager';
 import { generateValidatedObject } from './ai/validation';
+import { settingsService } from './lib/settings';
 
 // Initialize output manager for coordinated console/progress output
-const output = new OutputManager();
+const output = typeof window === 'undefined' ? new OutputManager() : console;
 
 // Replace console.log with output.log
 function log(...args: any[]) {
@@ -35,11 +36,9 @@ type ResearchResult = {
 // increase this if you have higher API rate limits
 const ConcurrencyLimit = 1;
 
-// Initialize Firecrawl with optional API key and optional base url
-
+// Initialize Firecrawl with API key from settings
 const firecrawl = new FirecrawlApp({
-  apiKey: process.env.FIRECRAWL_KEY ?? '',
-  apiUrl: process.env.FIRECRAWL_BASE_URL,
+  apiKey: settingsService.getApiKeys().searchApi,
 });
 
 // take en user query, return a list of SERP queries
@@ -55,14 +54,21 @@ async function generateSerpQueries({
   const res = await generateValidatedObject({
     prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. 
 
-VERIFICATION STRATEGY:
-- Generate queries that target authoritative primary sources
-- Include queries to verify specific claims and data points
-- Seek official/institutional sources when available
-- Look for peer-reviewed or academically verified sources
-- Target fact-checking organizations and reputable databases
-- Include queries to find contradicting evidence or alternative viewpoints
-- Search for recent updates or corrections to historical information
+SEARCH STRATEGY:
+- Start with company's official sources and press releases
+- Include financial and business news sources
+- Look for industry analysis and market reports
+- Search for recent company developments and contracts
+- Include regulatory filings and official documents
+- Consider searching business databases and directories
+- Look for executive interviews and company presentations
+- Search for partnerships and client testimonials
+
+RESPONSE FORMAT:
+Each query in the queries array MUST be an object with the following fields:
+- query: The actual search query string
+- researchGoal: The goal and research direction for this query
+- verificationFocus: Key claims to verify from authoritative sources
 
 Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${
       learnings
@@ -116,25 +122,35 @@ async function processSerpResult({
   );
   log(`Ran ${query}, found ${contents.length} contents`);
 
+  // If no contents found, return empty arrays in the correct format
+  if (contents.length === 0) {
+    return {
+      learnings: [],
+      followUpQuestions: [],
+    };
+  }
+
   const res = await generateValidatedObject({
     abortSignal: AbortSignal.timeout(60_000),
     prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. 
 
-FACT VERIFICATION REQUIREMENTS:
-- Cross-verify all factual claims across multiple sources
-- Assess source credibility (academic, institutional, peer-reviewed, etc.)
-- Check publication dates to ensure information currency
-- Look for consensus among expert sources
-- Note any significant disagreements or alternative viewpoints
-- Consider potential biases in source material
-- Flag claims that lack sufficient verification
+BUSINESS RESEARCH REQUIREMENTS:
+- Focus on verifiable business facts and metrics
+- Extract key company achievements and milestones
+- Identify major projects, contracts, and partnerships
+- Note company size, revenue, and growth metrics when available
+- Document client relationships and project outcomes
+- Track industry recognition and awards
+- Analyze market position and competitive advantages
+- Verify claims against official sources and press releases
+- Consider both company statements and independent analysis
 
 For each learning:
-1. Count how many independent sources confirm it
-2. Assess the credibility of those sources
-3. Note any conflicting information or alternative views
-4. Check for recent updates or corrections
-5. Consider the context and any potential limitations
+1. Verify information across multiple sources
+2. Prioritize recent developments (last 1-2 years)
+3. Include specific numbers, dates, and measurable outcomes
+4. Note the context of business developments
+5. Consider market impact and industry significance
 
 Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and information dense as possible. Include specific data points, dates, and measurable facts when available.\n\n<contents>${contents
       .map(content => `<content>\n${content}\n</content>`)
@@ -143,9 +159,9 @@ Return a maximum of ${numLearnings} learnings, but feel free to return less if t
       learnings: z
         .array(
           z.object({
-            fact: z.string().describe('The verified fact or learning'),
+            fact: z.string().describe('The verified business fact or learning'),
             sourcesCount: z.number().describe('Number of independent sources that confirm this fact'),
-            sourceTypes: z.array(z.enum(['academic', 'institutional', 'news', 'expert', 'other'])).describe('Types of sources that confirm this fact'),
+            sourceTypes: z.array(z.enum(['company', 'news', 'financial', 'regulatory', 'industry', 'other'])).describe('Types of sources that confirm this fact'),
             confidenceLevel: z.enum(['verified', 'likely', 'needs_verification']).describe('Confidence in the fact based on source quality and consensus'),
             dateVerified: z.string().describe('Most recent date this information was confirmed'),
             conflictingInfo: z.string().describe('Any significant disagreements or alternative viewpoints'),
