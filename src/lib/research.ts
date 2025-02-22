@@ -8,6 +8,7 @@ export interface ResearchResult {
 
 export interface ResearchSession {
   id: string
+  title: string
   query: string
   results: ResearchResult[]
   status: 'in-progress' | 'completed' | 'error'
@@ -56,8 +57,14 @@ export class ResearchService {
   }
 
   async startResearch(query: string, breadth: number = 4, depth: number = 2): Promise<ResearchSession> {
+    const initialQuery = query.split('\n')[0].replace('Initial Query: ', '').trim()
+    const title = initialQuery.length > 60 
+      ? initialQuery.substring(0, 57) + '...'
+      : initialQuery
+
     const session: ResearchSession = {
       id: Date.now().toString(),
+      title,
       query,
       results: [],
       status: 'in-progress',
@@ -73,7 +80,6 @@ export class ResearchService {
         breadth,
         depth,
         onProgress: (progress) => {
-          // You can implement progress updates here
           console.log('Research progress:', progress)
         },
       })
@@ -109,20 +115,97 @@ export class ResearchService {
     const session = this.getSession(sessionId)
     if (!session) throw new Error('Session not found')
 
-    // TODO: Implement proper report generation
-    const report = `# Research Report: ${session.query}
-${session.results.map(result => `
-## Findings
-${result.learnings.join('\n')}
+    const [initialQuery, ...qaPairs] = session.query.split('\n').filter(line => line.trim())
+    const mainQuery = initialQuery.replace('Initial Query: ', '').trim()
+    
+    let qaSection = ''
+    if (qaPairs.length > 0) {
+      qaSection = `\n## Research Focus\n\nTo better understand the research requirements, the following aspects were explored:\n\n${qaPairs
+        .filter(line => line.startsWith('Q: ') || line.startsWith('A: '))
+        .map(line => {
+          if (line.startsWith('Q: ')) return `**${line.slice(3)}**`
+          if (line.startsWith('A: ')) return `${line.slice(3)}\n`
+          return line
+        })
+        .join('\n')}`
+    }
 
-## Sources
-${result.visitedUrls.join('\n')}
-`).join('\n')}
+    const allFindings = session.results.flatMap(result => result.learnings)
+    const allSources = session.results.flatMap(result => result.visitedUrls)
+    
+    const categories = new Map<string, { title: string; findings: string[] }>()
+    allFindings.forEach(finding => {
+      const words = finding.toLowerCase().split(' ')
+      let category = ''
+      
+      if (words.some(w => ['performance', 'speed', 'benchmark', 'fps'].includes(w))) {
+        category = 'Performance Analysis'
+      } else if (words.some(w => ['feature', 'capability', 'support'].includes(w))) {
+        category = 'Features and Capabilities'
+      } else if (words.some(w => ['comparison', 'versus', 'compared', 'vs'].includes(w))) {
+        category = 'Comparative Analysis'
+      } else if (words.some(w => ['market', 'price', 'cost', 'value'].includes(w))) {
+        category = 'Market Analysis'
+      } else if (words.some(w => ['technical', 'specification', 'architecture'].includes(w))) {
+        category = 'Technical Specifications'
+      } else {
+        category = 'General Findings'
+      }
+      
+      const existing = categories.get(category) || { title: category, findings: [] }
+      existing.findings.push(finding)
+      categories.set(category, existing)
+    })
+
+    const findingsSection = Array.from(categories.values())
+      .map(({ title, findings }) => {
+        const narrativeIntro = `### ${title}\n\nThe research revealed several key insights regarding ${title.toLowerCase()}:\n\n`
+        const narrativePoints = findings
+          .map(f => f.trim())
+          .join('. ') + '.'
+        return narrativeIntro + narrativePoints
+      })
+      .join('\n\n')
+
+    const sourcesSection = allSources
+      .map(url => {
+        try {
+          const urlObj = new URL(url)
+          const title = urlObj.hostname
+            .replace('www.', '')
+            .split('.')
+            .slice(0, -1)
+            .join('.')
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+          return `- [${title}](${url})`
+        } catch {
+          return `- ${url}`
+        }
+      })
+      .join('\n')
+
+    const report = `# Research Report: ${mainQuery}
+
+## Executive Summary
+This comprehensive research report examines ${mainQuery}. The analysis synthesizes information from multiple authoritative sources, providing a detailed overview of the topic and its various aspects.
+${qaSection}
+
+## Key Findings and Analysis
+${findingsSection}
+
+## Reference Sources
+The following sources were consulted for this research:
+
+${sourcesSection}
+
+---
+*Report generated using Deep Research AI - ${new Date().toLocaleDateString()}*
 `
     return report
   }
 
-  // For testing purposes only
   _clearSessionsForTesting() {
     if (process.env.NODE_ENV === 'test') {
       this.clearSessions()

@@ -13,6 +13,7 @@ export default function HomePage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingStatus, setLoadingStatus] = useState('')
   const [recentSessions, setRecentSessions] = useState<Array<{ id: string; query: string; timestamp: Date }>>([])
   const [feedbackQuestions, setFeedbackQuestions] = useState<string[]>([])
   const [feedbackAnswers, setFeedbackAnswers] = useState<string[]>([])
@@ -45,15 +46,26 @@ export default function HomePage() {
 
     try {
       setIsLoading(true)
-      const questions = await generateFeedback({ query: searchQuery })
-      setFeedbackQuestions(questions)
-      setFeedbackAnswers(new Array(questions.length).fill(''))
-      setShowQuestions(true)
+      setLoadingStatus('Starting...')
+      
+      const questions = await generateFeedback({ 
+        query: searchQuery,
+        onProgress: (status) => {
+          setLoadingStatus(status)
+        }
+      })
+      
+      if (questions) {
+        setFeedbackQuestions(questions)
+        setFeedbackAnswers(new Array(questions.length).fill(''))
+        setShowQuestions(true)
+      }
     } catch (error) {
       console.error('Feedback generation error:', error)
-      toast.error('Failed to generate questions. Please try again.')
+      // Error toasts are now handled in generateFeedback
     } finally {
       setIsLoading(false)
+      setLoadingStatus('')
     }
   }
 
@@ -81,7 +93,7 @@ ${feedbackQuestions.map((q, i) => `Q: ${q}\nA: ${feedbackAnswers[i]}`).join('\n'
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 dark:from-gray-900 dark:to-gray-800">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 pt-8 dark:from-gray-900 dark:to-gray-800">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -236,7 +248,14 @@ ${feedbackQuestions.map((q, i) => `Q: ${q}\nA: ${feedbackAnswers[i]}`).join('\n'
               disabled={isLoading}
               className="w-full rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-primary-500 dark:hover:bg-primary-400"
             >
-              {isLoading ? 'Generating Questions...' : 'Continue'}
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <span>{loadingStatus}</span>
+                </div>
+              ) : (
+                'Continue'
+              )}
             </button>
           </form>
         ) : (
