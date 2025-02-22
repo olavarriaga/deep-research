@@ -55,7 +55,7 @@ export class ResearchService {
     }
   }
 
-  async startResearch(query: string): Promise<ResearchSession> {
+  async startResearch(query: string, breadth: number = 4, depth: number = 2): Promise<ResearchSession> {
     const session: ResearchSession = {
       id: Date.now().toString(),
       query,
@@ -70,8 +70,8 @@ export class ResearchService {
     try {
       const { learnings, visitedUrls } = await deepResearch({
         query,
-        breadth: 4,
-        depth: 2,
+        breadth,
+        depth,
         onProgress: (progress) => {
           // You can implement progress updates here
           console.log('Research progress:', progress)
